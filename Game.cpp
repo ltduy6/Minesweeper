@@ -6,24 +6,15 @@
 #include <queue>
 
 // Init
-bool Game::isContinue()
-{
-	std::ifstream fin("Data.txt"); 
-	std::string line; 
-	std::getline(fin, line, '\n'); 
-	fin.close();
-	return (line == "0 0");
-}
 void Game::loadVariable()
 {
 	this->window = nullptr; 
-	this->texture.loadFromFile("images/tiles.jpg");
-	this->sprite.setTexture(texture);
 	// Game logic
-	this->width = 9; 
-	this->height = 9; 
+	this->width = 9;
+	this->height = 9;
 	this->numMines = 10;
 	this->currentIndexMove = 0;
+	this->state = 0;
 	this->startGame = false;
 	this->endGame = false;
 	this->continueGame = this->isContinue(); 
@@ -33,30 +24,9 @@ void Game::loadVariable()
 	this->runningGame = false; 
 	this->firstClick = false; 
 	this->putFlag = false;
-
-	if (this->continueGame)
-	{
-		std::ifstream fin("images/Data.txt"); 
-		fin >> this->height >> this->width; 
-		fin.get(); 
-		std::string line; 
-		for (int i = 0; i < this->height; ++i)
-		{
-			std::getline(fin, line, '\n'); 
-			for (int j = 0; j < this->width; ++j)
-				this->hideGrid[i].push_back(line[j]); 
-		}
-		for (int i = 0; i < this->height; ++i)
-		{
-			std::getline(fin, line, '\n'); 
-			for (int j = 0; j < this->width; ++j)
-			{
-				Ceil* newCeil = new Ceil(line[j], i, j); 
-				this->ceil[i].push_back(newCeil);
-			}
-		}
-		fin.close(); 
-	}
+	this->isChoosing = false; 
+	this->timer = "000";
+	this->state = -1; 
 }
 void Game::loadWindow()
 {
@@ -75,24 +45,18 @@ void Game::loadWindow()
 }
 void Game::InitButtons()
 {
-	this->buttons["NEW_GAME"] = new Button(this->posButton[0].first, this->posButton[0].second, this->videoMode.width / 5, this->videoMode.height / 16,
-		&this->font, "New Game",
-		sf::Color(70, 70, 70, 200), sf::Color(150, 150, 150, 255), sf::Color(20, 20, 20, 200));
+	for (auto x : this->buttons)
+		delete x.second; 
+	this->buttons["NEW_GAME"] = new Button(this->posButton[0].first, this->posButton[0].second, this->videoMode.width / 5, this->videoMode.height / 13, "New Game");
 	
-	if (this->continueGame)
+	if (this->isContinue())
 	{
-		this->buttons["CONTINUE"] = new Button(this->posButton[1].first, this->posButton[1].second, this->videoMode.width / 5, this->videoMode.height / 16,
-			&this->font, "Continue",
-			sf::Color(70, 70, 70, 200), sf::Color(150, 150, 150, 255), sf::Color(20, 20, 20, 200));
+		this->buttons["CONTINUE"] = new Button(this->posButton[1].first, this->posButton[1].second, this->videoMode.width / 5, this->videoMode.height / 13, "Continue");
 
-		this->buttons["EXIT_GAME"] = new Button(this->posButton[2].first, this->posButton[2].second, this->videoMode.width / 5, this->videoMode.height / 16,
-			&this->font, "Exit",
-			sf::Color(70, 70, 70, 200), sf::Color(150, 150, 150, 255), sf::Color(20, 20, 20, 200));
+		this->buttons["EXIT_GAME"] = new Button(this->posButton[2].first, this->posButton[2].second, this->videoMode.width / 5, this->videoMode.height / 13, "Quit");
 	}
 	else {
-		this->buttons["EXIT_GAME"] = new Button(this->posButton[1].first, this->posButton[1].second, this->videoMode.width / 5, this->videoMode.height / 16,
-			&this->font, "Quit",
-			sf::Color(70, 70, 70, 200), sf::Color(150, 150, 150, 255), sf::Color(20, 20, 20, 200));
+		this->buttons["EXIT_GAME"] = new Button(this->posButton[1].first, this->posButton[1].second, this->videoMode.width / 5, this->videoMode.height / 13, "Quit");
 	}
 }
 void Game::InitFont()
@@ -102,11 +66,13 @@ void Game::InitFont()
 }
 void Game::InitStopWatch()
 {
-	this->stopwatch = new Stopwatch(this->width * this->size * 2 - 64 - 50, this->height * this->size * 2);
+	delete this->stopwatch; 
+	this->stopwatch = new Stopwatch(this->timer, (this->width + 1) * this->size , this->height * this->size * 2);
 }
 void Game::InitFlag()
 {
-	this->flag = new Flag(0, this->height * this->size * 2, this->numMines);
+	delete this->flag; 
+	this->flag = new Flag((this->width - 2.5) * this->size, this->height * this->size * 2, this->numMines);
 }
 void Game::InitNewWindow()
 {
@@ -120,8 +86,23 @@ void Game::InitNewWindow()
 }
 void Game::InitIcon()
 {
-	this->icon = new Icon((this->width * this->size * 2) / 2 - this->size, this->height * this->size * 2);
+	delete this->icon; 
+	this->icon = new Icon(this->state, (this->width - 1) * this->size * 2, this->height * this->size * 2);
 }
+void Game::InitLevel()
+{
+	for (auto x : this->levels)
+		delete x.second; 
+	this->levels["Easy"] = new Button(0, (this->height - 1) * this->size * 2, this->size * 4, this->size * 2, "Easy");
+	this->levels["Medium"] = new Button(0, (this->height - 2) * this->size * 2, this->size * 4, this->size * 2, "Medium");
+	this->levels["Hard"] = new Button(0, (this->height - 3) * this->size * 2, this->size * 4, this->size * 2, "Hard");
+}
+void Game::InitCurrentLevel()
+{
+	delete this->currentLevel;
+	this->currentLevel = new Button(0, this->height * this->size * 2, this->size * 4, this->size * 2, "Easy");
+}
+
 // Create grid
 void Game::generateGrid()
 {
@@ -203,12 +184,16 @@ Game::Game()
 	this->loadWindow(); 
 	this->InitFont();
 	this->InitButtons();
+	this->InitLevel();
+	this->InitCurrentLevel();
 }
 
 Game::~Game()
 {
 	for (auto x : this->buttons)
 		delete x.second; 
+	for (auto x : this->levels)
+		delete x.second;
 
 	if (!this->startMenu)
 	{
@@ -220,6 +205,7 @@ Game::~Game()
 	delete this->stopwatch;
 	delete this->flag;
 	delete this->icon;
+	delete this->currentLevel; 
 	delete this->window; 
 }
 
@@ -246,6 +232,17 @@ const bool Game::WinGame() const
 	return true;
 }
 
+const bool Game::isContinue() const
+{
+	std::ifstream fin("images/Data.txt");
+	std::string line;
+	std::getline(fin, line, '\n');
+	fin.close();
+	if (line != "0")
+		return true;
+	return false;
+}
+
 // Updates
 void Game::update()
 {
@@ -258,14 +255,34 @@ void Game::update()
 	{
 		if (this->delay)
 		{
-			this->updateGrid();
-			if (this->WinGame() == true)
+			this->currentLevel->update(this->moustPosView);
+			if (this->isChoosing)
 			{
-				this->runningGame = false; 
-				this->icon->update(true);
+				this->updateLevel();
 			}
-			this->stopwatch->update(this->runningGame);
-			this->flag->update(this->numMines);
+			if (this->endGame == false)
+			{
+				if (!this->isChoosing)
+				{
+					this->stopwatch->update(this->runningGame);
+					this->updateGrid();
+				}
+
+				if (this->WinGame() == true)
+				{
+					this->runningGame = false;
+					this->endGame = true;
+					this->state = 1;
+				}
+
+				if (this->endGame)
+				{
+					this->deleteGame();
+				}
+
+				this->flag->update(this->numMines);
+				this->icon->update(this->state);
+			}
 		}
 	}
 }
@@ -276,30 +293,95 @@ void Game::pollEvents()
 		switch (this->event.type)
 		{
 		case sf::Event::Closed:
-			this->saveGame();
-			this->deleteGame();
+			if(this->startMenu == false)
+				this->saveGame();
 			this->window->close(); 
 			break; 
 		case sf::Event::KeyPressed:
 			if (this->event.key.code == sf::Keyboard::Escape)
+			{
+				if (this->startMenu == false)
+					this->saveGame();
 				this->window->close(); 
+			}
 			break;
 		case sf::Event::MouseButtonReleased:
-			if (this->newGame) {
-				if (this->buttons["EASY"]->isReleased(this->moustPosView) ||
-					this->buttons["MEDIUM"]->isReleased(moustPosView) ||
-					this->buttons["HARD"]->isReleased(moustPosView))
+			if (this->startMenu)
+			{
+				if (this->buttons["EXIT_GAME"]->isReleased(moustPosView))
+					this->window->close();
+			}
+			if (!this->newGame)
+			{
+				if (this->buttons["NEW_GAME"]->isReleased(this->moustPosView))
+				{
+					this->delay = true;
+					this->startMenu = false;
+					this->InitNewWindow();
+					this->generateGrid();
+					this->InitStopWatch();
+					this->InitFlag();
+					this->InitIcon();
+					this->newGame = true; 
+				}
+			}
+			if (this->continueGame)
+			{
+				if (this->buttons["CONTINUE"]->isReleased(moustPosView))
 				{
 					if (this->startGame == false)
 					{
 						this->delay = true;
 						this->startMenu = false;
-						this->generateGrid();
+						this->loadData();
 						this->InitStopWatch();
 						this->InitFlag();
 						this->InitNewWindow();
 						this->InitIcon();
-						this->startGame = true; 
+						this->initCurrentIndexMove();
+						this->startGame = true;
+					}
+				}
+			}
+			if (this->startMenu == false)
+			{
+				if (this->currentLevel->isReleased(this->moustPosView))
+					this->isChoosing = true; 
+				if (this->isChoosing == true)
+				{
+					if (this->levels["Easy"]->isReleased(this->moustPosView) ||
+						this->levels["Medium"]->isReleased(moustPosView) ||
+						this->levels["Hard"]->isReleased(moustPosView))
+					{
+						if (this->levels["Easy"]->isReleased(this->moustPosView))
+						{
+							this->width = 9; 
+							this->height = 9; 
+							this->numMines = 10; 
+						}
+						if (this->levels["Medium"]->isReleased(this->moustPosView))
+						{
+							this->width = 16;
+							this->height = 16;
+							this->numMines = 40;
+						}
+						if (this->levels["Hard"]->isReleased(this->moustPosView))
+						{
+							this->width = 24;
+							this->height = 24;
+							this->numMines = 99;
+						}
+						this->updateCurrentLevel(); 
+						this->InitNewWindow();
+						this->deleteGrid();
+						this->generateGrid();
+						this->loadVariableAgain();
+						this->InitStopWatch();
+						this->InitFlag();
+						this->InitIcon();
+						this->InitLevel(); 
+						this->isChoosing = false; 
+						this->runningGame = false; 
 					}
 				}
 			}
@@ -325,6 +407,7 @@ void Game::pollEvents()
 						}
 					}
 			}
+			break; 
 		}
 	}
 }
@@ -367,7 +450,8 @@ void Game::updateGrid()
 								this->ceil[i][j]->fillCeil(this->hideGrid[i][j]);
 						}
 					this->runningGame = false; 
-					this->icon->update(false);
+					this->endGame = true; 
+					this->state = 0; 
 				}
 				else
 				{
@@ -398,53 +482,26 @@ void Game::updateButtons()
 {
 	for (auto x : this->buttons)
 		x.second->update(this->moustPosView);
+}
+void Game::updateLevel()
+{
+	for (auto x : this->levels)
+		if(this->currentLevel->getText() != x.first)
+			x.second->update(this->moustPosView); 
 
-	if (this->buttons["NEW_GAME"]->isPressed())
+}
+void Game::updateCurrentLevel()
+{
+	delete this->currentLevel; 
+	for (auto x : this->levels)
 	{
-		int x = this->posButton[0].first + this->videoMode.width / 8 + this->videoMode.width / 5; 
-		this->buttons["EASY"] = new Button(x, this->posButton[0].second - this->videoMode.height / 8 , this->videoMode.width / 5, this->videoMode.height / 16,
-			&this->font, "Easy",
-			sf::Color(70, 70, 70, 200), sf::Color(150, 150, 150, 255), sf::Color(20, 20, 20, 200));
-
-		this->buttons["MEDIUM"] = new Button(x, this->posButton[0].second, this->videoMode.width / 5, this->videoMode.height / 16,
-			&this->font, "Medium",
-			sf::Color(70, 70, 70, 200), sf::Color(150, 150, 150, 255), sf::Color(20, 20, 20, 200));
-
-		this->buttons["HARD"] = new Button(x, this->posButton[0].second + this->videoMode.height / 8, this->videoMode.width / 5, this->videoMode.height / 16,
-			&this->font, "Hard",
-			sf::Color(70, 70, 70, 200), sf::Color(150, 150, 150, 255), sf::Color(20, 20, 20, 200));
-
-		this->newGame = true; 
-	}
-	
-	if (this->newGame)
-	{
-		if (this->buttons["EASY"]->isPressed())
+		if (x.second->isReleased(this->moustPosView))
 		{
-			this->width = 9;
-			this->height = 9;
-			this->numMines = 10;
+			this->currentLevel = new Button(0, this->height * this->size * 2, this->size * 4, this->size * 2, x.first);
+			break;
 		}
-		if (this->buttons["MEDIUM"]->isPressed())
-		{
-			this->width = 16;
-			this->height = 16;
-			this->numMines = 40;
-		}
-		if (this->buttons["HARD"]->isPressed())
-		{
-			this->width = 24;
-			this->height = 24;
-			this->numMines = 99;
-		}
-	}
-
-	if (this->buttons["EXIT_GAME"]->isPressed())
-	{
-		this->endGame = true; 
 	}
 }
-
 
 // Render
 void Game::displayGrid()
@@ -460,6 +517,11 @@ void Game::renderButtons()
 	for (auto x : this->buttons)
 		x.second->render(this->window); 
 }
+void Game::renderLevel()
+{
+	for (auto x : this->levels)
+		x.second->render(this->window);
+}
 void Game::render()
 {
 	this->window->clear(sf::Color::White); 
@@ -472,6 +534,11 @@ void Game::render()
 		this->stopwatch->render(this->window);
 		this->flag->render(this->window);
 		this->icon->render(this->window);
+		this->currentLevel->render(this->window); 
+		if (this->isChoosing)
+		{
+			this->renderLevel();
+		}
 	}
 
 	this->window->display();
@@ -490,7 +557,12 @@ void Game::temp()
 void Game::saveGame()
 {
 	std::ofstream fout("images/Data.txt"); 
-	fout << this->height << ' ' << this->width << '\n';
+	fout << this->height << ' '; 
+	fout << this->width << ' '; 
+	fout << this->numMines << ' ';
+	fout << this->state << '\n';
+	fout << this->stopwatch->getTimer() << '\n';
+
 	for (int i = 0; i < this->height; ++i)
 	{
 		for (int j = 0; j < this->width; ++j)
@@ -503,27 +575,82 @@ void Game::saveGame()
 			fout << this->ceil[i][j]->getIcon(); 
 		fout << '\n';
 	}
-	fout << this->numMines << '\n';
-	fout << this->stopwatch->getTimer() << '\n';
+	fout.close();
 }
 
 void Game::deleteGame()
 {
-	for (auto x : this->buttons)
-		delete x.second;
-
-	if (!this->startMenu)
-	{
-		for (int i = 0; i < this->height; ++i)
-			for (int j = 0; j < this->width; ++j)
-				delete ceil[i][j];
-	}
-
-	delete this->stopwatch;
-	delete this->flag;
-	delete this->icon;
-	delete this->window;
+	std::ofstream fout("images/Data.txt");
+	fout << "0";
+	fout.close();
 }
+
+void Game::loadData()
+{
+	std::ifstream fin("images/Data.txt");
+	std::cout << "Yes" << '\n';
+	fin >> this->height; 
+	fin >> this->width;
+	fin >> this->numMines;
+	fin >> this->state; 
+	fin.get();
+	std::string line;
+	std::getline(fin, this->timer, '\n');
+	for (int i = 0; i < this->height; ++i)
+	{
+		std::getline(fin, line, '\n');
+		this->hideGrid.push_back(line);
+	}
+	for (int i = 0; i < this->height; ++i)
+	{
+		std::vector<Ceil*> newVector;
+		std::getline(fin, line, '\n');
+		for (int j = 0; j < this->width; ++j)
+		{
+			Ceil* newCeil = new Ceil(line[j], i, j);
+			newVector.push_back(newCeil);
+		}
+		this->ceil.push_back(newVector);
+	}
+	fin.close();
+}
+
+void Game::initCurrentIndexMove()
+{
+	for(int i = 0; i < this->height; ++i)
+		for(int j = 0; j < this->width; ++j)
+			if (this->ceil[i][j]->isEqual('_') == false)
+			{
+				this->currentIndexMove = 1; 
+				return; 
+			}
+	this->currentIndexMove = 0;
+}
+
+void Game::deleteGrid()
+{
+	for (auto& x : this->ceil)
+	{
+		for (auto y : x)
+			delete y; 
+		x.clear(); 
+	}
+	this->ceil.clear();
+}
+
+void Game::loadVariableAgain()
+{
+	this->currentIndexMove = 0;
+	this->startGame = false;
+	this->endGame = false;
+	this->runningGame = false;
+	this->firstClick = false;
+	this->putFlag = false;
+	this->isChoosing = false;
+	this->timer = "000";
+	this->state = -1;
+}
+
 
 
 

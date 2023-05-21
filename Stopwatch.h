@@ -23,11 +23,11 @@ private:
 	sf::Clock clock; 
 	sf::Time elapsedTime;
 public:
-	Stopwatch(float x, float y); 
+	Stopwatch(std::string time, float x, float y); 
 	~Stopwatch();
 
-	std::string getTimer() const; 
-
+	std::string getTimer(); 
+	std::string sumStrings(std::string s1, std::string s2) const; 
 	void update(bool running); 
 	void render(sf::RenderTarget* target);
 };

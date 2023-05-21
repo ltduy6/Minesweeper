@@ -1,11 +1,16 @@
 #include "Icon.h"
 
-Icon::Icon(float x, float y)
+Icon::Icon(int state, float x, float y)
 {
 	this->textureHappy.loadFromFile("images/happiness.png"); 
 	this->textureSad.loadFromFile("images/sad.png"); 
 	this->textureCool.loadFromFile("images/cool.png"); 
-	this->sprite.setTexture(this->textureHappy); 
+	if (state == 1)
+		this->sprite.setTexture(this->textureCool);
+	else if(state == 0)
+		this->sprite.setTexture(this->textureSad);
+	else
+		this->sprite.setTexture(this->textureHappy);
 	this->sprite.setColor(sf::Color::White); 
 	this->sprite.setPosition(x, y);
 }
@@ -14,12 +19,14 @@ Icon::~Icon()
 {
 }
 
-void Icon::update(bool state)
+void Icon::update(int state)
 {
-	if (state == false)
+	if (state == 0)
 		this->sprite.setTexture(this->textureSad); 
-	else
+	else if(state == 1)
 		this->sprite.setTexture(this->textureCool);
+	else
+		this->sprite.setTexture(this->textureHappy);
 }
 
 void Icon::render(sf::RenderTarget* target)

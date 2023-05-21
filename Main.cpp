@@ -10,7 +10,7 @@ int main()
 
     // Game
     Game game; 
-    while (game.running() && !game.EndGame())
+    while (game.running())
     {
         game.update(); 
 

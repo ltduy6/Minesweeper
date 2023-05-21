@@ -18,10 +18,10 @@ private:
 	sf::Texture textureCool;
 	sf::Sprite sprite; 
 public:
-	Icon(float x, float y); 
+	Icon(int state, float x, float y); 
 	~Icon(); 
 
-	void update(bool state); 
+	void update(int state); 
 	void render(sf::RenderTarget* target); 
 };
 

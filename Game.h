@@ -28,15 +28,15 @@ private:
 	sf::RenderWindow* window; 
 	sf::Event event;
 	sf::VideoMode videoMode;
-	sf::Texture texture;
-	sf::Sprite sprite;
 	sf::Font font; 
 
 	std::map<std::string, Button*> buttons; 
+	std::map<std::string, Button*> levels; 
 	std::vector<std::vector<Ceil*>> ceil;
 	Stopwatch* stopwatch;
 	Flag* flag;
 	Icon* icon;
+	Button* currentLevel;
 
 	// Game logic
 	sf::Vector2i mousePosWindow; 
@@ -53,16 +53,18 @@ private:
 	bool startGame;
 	bool firstClick;
 	bool putFlag; 
+	bool isChoosing; 
 	int currentIndexMove;
 	float scale;
 	int size{ 32 };
 	int width{9}, height{9};
 	int numMines{10};
+	int state; 
+	std::string timer;
 	std::vector<std::string> showGrid;
 	std::vector<std::string> hideGrid; 
 
 	// private functions
-	bool isContinue(); 
 	void loadVariable(); 
 	void loadWindow(); 
 	void InitFont(); 
@@ -71,12 +73,15 @@ private:
 	void InitFlag();
 	void InitNewWindow();
 	void InitIcon();
+	void InitLevel();
+	void InitCurrentLevel();
 public:
 	// constuctors & destructors
 	Game(); 
 	virtual ~Game(); 
 
 	// Accessors
+	const bool isContinue() const;
 	const bool running() const; 
 	const bool EndGame() const; 
 	const bool WinGame() const; 
@@ -95,13 +100,20 @@ public:
 	void updateMousePosition(); 
 	void updateGrid();
 	void updateButtons(); 
+	void updateLevel();
+	void updateCurrentLevel();
 	void update();
 
 	void displayGrid();
 	void renderButtons();  
+	void renderLevel();
 	void render();
 
+	void loadData();
 	void saveGame();
 	void deleteGame();
+	void deleteGrid();
+	void initCurrentIndexMove();
+	void loadVariableAgain(); 
 };
 
