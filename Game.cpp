@@ -34,7 +34,7 @@ void Game::loadWindow()
 	this->videoMode.height = 800; 
 	this->videoMode.width = 800; 
 
-	this->window = new sf::RenderWindow(this->videoMode, "Minesweeper"); 
+	this->window = new sf::RenderWindow(this->videoMode, "Minesweeper", sf::Style::Titlebar | sf::Style::Close); 
 
 	this->window->setFramerateLimit(60);
 
@@ -81,7 +81,7 @@ void Game::InitNewWindow()
 	this->videoMode.height = this->height * this->size * 2 + this->size * 2 + 1; 
 	this->videoMode.width = this->width * this->size * 2;
 
-	this->window = new sf::RenderWindow(this->videoMode, "Minesweeper");
+	this->window = new sf::RenderWindow(this->videoMode, "Minesweeper", sf::Style::Titlebar | sf::Style::Close);
 
 	this->window->setFramerateLimit(60);
 }
