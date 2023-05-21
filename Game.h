@@ -60,8 +60,8 @@ private:
 	int width{9}, height{9};
 	int numMines{10};
 	int state; 
+	std::string textLevel;
 	std::string timer;
-	std::vector<std::string> showGrid;
 	std::vector<std::string> hideGrid; 
 
 	// private functions
@@ -94,7 +94,6 @@ public:
 	int countAdjacentMines(int i, int j); 
 	void unlockEmptyCeil(int row, int col); 
 	void fillGrid(); 
-	void temp();
 
 	void pollEvents(); 
 	void updateMousePosition(); 

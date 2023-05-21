@@ -26,6 +26,7 @@ void Game::loadVariable()
 	this->putFlag = false;
 	this->isChoosing = false; 
 	this->timer = "000";
+	this->textLevel = "Easy";
 	this->state = -1; 
 }
 void Game::loadWindow()
@@ -39,9 +40,9 @@ void Game::loadWindow()
 
 	this->scale = this->videoMode.width / (this->size * this->width); 
 
-	this->posButton[0] = { this->videoMode.width / 4, this->videoMode.height / 4 }; 
-	this->posButton[1] = { this->videoMode.width / 4, this->videoMode.height / 4 + this->videoMode.height / 16 + this->videoMode.height / 8 }; 
-	this->posButton[2] = { this->videoMode.width / 4, this->posButton[1].second + this->videoMode.height / 16 + this->videoMode.height / 8 }; 
+	this->posButton[0] = { this->videoMode.width / 2.5, this->videoMode.height / 4 }; 
+	this->posButton[1] = { this->videoMode.width / 2.5, this->videoMode.height / 4 + this->videoMode.height / 16 + this->videoMode.height / 8 }; 
+	this->posButton[2] = { this->videoMode.width / 2.5, this->posButton[1].second + this->videoMode.height / 16 + this->videoMode.height / 8 }; 
 }
 void Game::InitButtons()
 {
@@ -100,7 +101,7 @@ void Game::InitLevel()
 void Game::InitCurrentLevel()
 {
 	delete this->currentLevel;
-	this->currentLevel = new Button(0, this->height * this->size * 2, this->size * 4, this->size * 2, "Easy");
+	this->currentLevel = new Button(0, this->height * this->size * 2, this->size * 4, this->size * 2, this->textLevel);
 }
 
 // Create grid
@@ -111,17 +112,14 @@ void Game::generateGrid()
 	{
 		std::vector<Ceil*> newVector; 
 		std::string lineHide = ""; 
-		std::string lineShow = ""; 
 		for (int j = 0; j < this->width; ++j)
 		{
 			lineHide += '-'; 
-			lineShow += '_'; 
 			Ceil* newCeil = new Ceil('_', i, j);
 			newVector.push_back(newCeil);
 		}
 		this->ceil.push_back(newVector);
 		this->hideGrid.push_back(lineHide); 
-		this->showGrid.push_back(lineShow);
 	}
 }
 void Game::placeMines(int row, int col)
@@ -264,7 +262,6 @@ void Game::update()
 			{
 				if (!this->isChoosing)
 				{
-					this->stopwatch->update(this->runningGame);
 					this->updateGrid();
 				}
 
@@ -275,13 +272,9 @@ void Game::update()
 					this->state = 1;
 				}
 
-				if (this->endGame)
-				{
-					this->deleteGame();
-				}
-
 				this->flag->update(this->numMines);
 				this->icon->update(this->state);
+				this->stopwatch->update(this->runningGame);
 			}
 		}
 	}
@@ -293,14 +286,16 @@ void Game::pollEvents()
 		switch (this->event.type)
 		{
 		case sf::Event::Closed:
-			if(this->startMenu == false)
+			if(this->startMenu == false && this->endGame == false)
 				this->saveGame();
+			if (this->endGame)
+				this->deleteGame(); 
 			this->window->close(); 
 			break; 
 		case sf::Event::KeyPressed:
 			if (this->event.key.code == sf::Keyboard::Escape)
 			{
-				if (this->startMenu == false)
+				if (this->startMenu == false && this->endGame == false)
 					this->saveGame();
 				this->window->close(); 
 			}
@@ -323,6 +318,8 @@ void Game::pollEvents()
 					this->InitFlag();
 					this->InitIcon();
 					this->newGame = true; 
+					this->continueGame = false; 
+					break; 
 				}
 			}
 			if (this->continueGame)
@@ -333,26 +330,37 @@ void Game::pollEvents()
 					{
 						this->delay = true;
 						this->startMenu = false;
+						this->startGame = true;
+						this->firstClick = true;
+						this->continueGame = false;
 						this->loadData();
+						this->InitNewWindow();
 						this->InitStopWatch();
 						this->InitFlag();
-						this->InitNewWindow();
 						this->InitIcon();
 						this->initCurrentIndexMove();
-						this->startGame = true;
+						this->InitLevel();
+						this->InitCurrentLevel();
+						this->runningGame = false;
+						break; 
 					}
 				}
 			}
 			if (this->startMenu == false)
 			{
 				if (this->currentLevel->isReleased(this->moustPosView))
-					this->isChoosing = true; 
+				{
+					this->isChoosing = !this->isChoosing; 
+					this->runningGame = !this->runningGame; 
+					break; 
+				}
 				if (this->isChoosing == true)
 				{
 					if (this->levels["Easy"]->isReleased(this->moustPosView) ||
 						this->levels["Medium"]->isReleased(moustPosView) ||
 						this->levels["Hard"]->isReleased(moustPosView))
 					{
+						this->deleteGrid();
 						if (this->levels["Easy"]->isReleased(this->moustPosView))
 						{
 							this->width = 9; 
@@ -373,7 +381,6 @@ void Game::pollEvents()
 						}
 						this->updateCurrentLevel(); 
 						this->InitNewWindow();
-						this->deleteGrid();
 						this->generateGrid();
 						this->loadVariableAgain();
 						this->InitStopWatch();
@@ -382,6 +389,7 @@ void Game::pollEvents()
 						this->InitLevel(); 
 						this->isChoosing = false; 
 						this->runningGame = false; 
+						break; 
 					}
 				}
 			}
@@ -446,7 +454,7 @@ void Game::updateGrid()
 					for (int i = 0; i < this->height; ++i)
 						for (int j = 0; j < this->width; ++j)
 						{
-							if(this->hideGrid[i][j] == '*')
+							if (this->hideGrid[i][j] == '*')
 								this->ceil[i][j]->fillCeil(this->hideGrid[i][j]);
 						}
 					this->runningGame = false; 
@@ -486,8 +494,7 @@ void Game::updateButtons()
 void Game::updateLevel()
 {
 	for (auto x : this->levels)
-		if(this->currentLevel->getText() != x.first)
-			x.second->update(this->moustPosView); 
+		x.second->update(this->moustPosView); 
 
 }
 void Game::updateCurrentLevel()
@@ -498,6 +505,7 @@ void Game::updateCurrentLevel()
 		if (x.second->isReleased(this->moustPosView))
 		{
 			this->currentLevel = new Button(0, this->height * this->size * 2, this->size * 4, this->size * 2, x.first);
+			this->textLevel = x.first; 
 			break;
 		}
 	}
@@ -543,15 +551,6 @@ void Game::render()
 
 	this->window->display();
 }
-void Game::temp()
-{
-	for (int i = 0; i < this->height; ++i)
-	{
-		for (int j = 0; j < this->width; ++j)
-			std::cout << this->hideGrid[i][j];
-		std::cout << std::endl;
-	}
-}
 
 // Save
 void Game::saveGame()
@@ -562,6 +561,7 @@ void Game::saveGame()
 	fout << this->numMines << ' ';
 	fout << this->state << '\n';
 	fout << this->stopwatch->getTimer() << '\n';
+	fout << this->textLevel << '\n';
 
 	for (int i = 0; i < this->height; ++i)
 	{
@@ -588,7 +588,6 @@ void Game::deleteGame()
 void Game::loadData()
 {
 	std::ifstream fin("images/Data.txt");
-	std::cout << "Yes" << '\n';
 	fin >> this->height; 
 	fin >> this->width;
 	fin >> this->numMines;
@@ -596,6 +595,7 @@ void Game::loadData()
 	fin.get();
 	std::string line;
 	std::getline(fin, this->timer, '\n');
+	std::getline(fin, this->textLevel, '\n');
 	for (int i = 0; i < this->height; ++i)
 	{
 		std::getline(fin, line, '\n');
@@ -629,6 +629,11 @@ void Game::initCurrentIndexMove()
 
 void Game::deleteGrid()
 {
+	for (auto& x : this->hideGrid)
+	{
+		x.clear(); 
+	}
+	this->hideGrid.clear();
 	for (auto& x : this->ceil)
 	{
 		for (auto y : x)
@@ -647,6 +652,7 @@ void Game::loadVariableAgain()
 	this->firstClick = false;
 	this->putFlag = false;
 	this->isChoosing = false;
+	this->continueGame = false; 
 	this->timer = "000";
 	this->state = -1;
 }
